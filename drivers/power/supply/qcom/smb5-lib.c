@@ -1327,9 +1327,11 @@ static const struct apsd_result *smblib_update_usb_type(struct smb_charger *chg)
 				POWER_SUPPLY_TYPE_USB_PD : apsd_result->pst;
 	}
 
+#ifdef CONFIG_MACH_ONEPLUS_8PRO
 /* @bsp, 2019/12/12 wireless and pd compatible.*/
 	if (chg->pd_active)
 		notify_pd_in_to_wireless();
+#endif
 
 	smblib_err(chg, "APSD=%s PD=%d dash_on=%d real_charger_type=%d\n",
 					apsd_result->name, chg->pd_active,

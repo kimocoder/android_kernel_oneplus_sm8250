@@ -4743,8 +4743,10 @@ static int smb5_probe(struct platform_device *pdev)
 /*usb connector hw auto detection*/
 	request_plug_irq(chg);
 	//check_factory_mode_disable_charge(chg);
+#ifdef CONFIG_MACH_ONEPLUS_8PRO
 /* @bsp, 2019/08/30 Wireless Charging porting */
 	exchg_information_register(chg);
+#endif
 	chg->probe_done = true;
 	pr_info("QPNP SMB5 probed successfully\n");
 	return rc;

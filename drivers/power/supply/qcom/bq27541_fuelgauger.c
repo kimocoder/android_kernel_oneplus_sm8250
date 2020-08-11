@@ -1371,7 +1371,9 @@ static void bq27541_hw_config(struct work_struct *work)
 	}
 	external_battery_gauge_register(&bq27541_batt_gauge);
 	bq27541_information_register(&bq27541_batt_gauge);
+#ifdef CONFIG_MACH_ONEPLUS_8PRO
 	exfg_information_register(&bq27541_batt_gauge);
+#endif
 	bq27541_cntl_cmd(di, BQ27541_SUBCMD_CTNL_STATUS);
 	udelay(66);
 	bq27541_read(BQ27541_REG_CNTL, &flags, 0, di);

@@ -22,8 +22,10 @@
 #include <linux/extcon-provider.h>
 #include <linux/usb/typec.h>
 #include <linux/usb/usbpd.h>
+#ifdef CONFIG_MACH_ONEPLUS_8PRO
 /* @bsp, 2019/08/30 Wireless Charging porting */
 #include <linux/oem/power/op_wlc_helper.h>
+#endif
 #include "usbpd.h"
 
 /* @bsp, 2019/09/18 usb & PD porting */
@@ -456,15 +458,20 @@ struct usbpd {
 	struct regulator	*vbus;
 	struct regulator	*vconn;
 
+#ifdef CONFIG_MACH_ONEPLUS_8PRO
 /* @bsp, 2019/08/30 Wireless Charging porting */
 	int			vbus_gpio;
 	int			otg_en_gpio;
+#endif
 
 	bool			vbus_enabled;
 	bool			vconn_enabled;
+	
+#ifdef CONFIG_MACH_ONEPLUS_8PRO
 /* @bsp, 2019/08/30 Wireless Charging porting */
 	bool			is_otg_mode;
 	bool			use_external_boost;
+#endif
 
 	u8			tx_msgid[SOPII_MSG + 1];
 	u8			rx_msgid[SOPII_MSG + 1];
@@ -501,8 +508,10 @@ struct usbpd {
 	u32			battery_sts_dobj;
 };
 
+#ifdef CONFIG_MACH_ONEPLUS_8PRO
 /* @bsp, 2019/08/30 Wireless Charging porting */
 static struct usbpd *pd_p;
+#endif
 
 static LIST_HEAD(_usbpd);	/* useful for debugging */
 
@@ -1226,6 +1235,7 @@ static void phy_shutdown(struct usbpd *pd)
 	}
 
 	if (pd->vbus_enabled) {
+#ifdef CONFIG_MACH_ONEPLUS_8PRO
 /* @bsp, 2019/08/30 Wireless Charging porting */
 		if (pd->use_external_boost) {
 			gpio_set_value_cansleep(pd->otg_en_gpio, 0);
@@ -1236,6 +1246,9 @@ static void phy_shutdown(struct usbpd *pd)
 			regulator_disable(pd->vbus);
 		}
 		pd->is_otg_mode = false;
+#else
+		regulator_disable(pd->vbus);
+#endif
 		pd->vbus_enabled = false;
 	}
 }
@@ -1987,6 +2000,7 @@ static void vconn_swap(struct usbpd *pd)
 	}
 }
 
+#ifdef CONFIG_MACH_ONEPLUS_8PRO
 /* @bsp, 2019/08/30 Wireless Charging porting */
 bool typec_is_otg_mode(void)
 {
@@ -1995,6 +2009,7 @@ bool typec_is_otg_mode(void)
 	else
 		return false;
 }
+#endif
 
 static int enable_vbus(struct usbpd *pd)
 {
@@ -2018,6 +2033,7 @@ static int enable_vbus(struct usbpd *pd)
 	if (count < 99)
 		msleep(100);	/* need to wait an additional tCCDebounce */
 
+#ifdef CONFIG_MACH_ONEPLUS_8PRO
 /* @bsp, 2019/08/30 Wireless Charging porting */
 	if (pd->use_external_boost) {
 		pd->is_otg_mode = true;
@@ -2043,6 +2059,15 @@ static int enable_vbus(struct usbpd *pd)
 			pd->vbus_enabled = true;
 		}
 	}
+#else
+	if (!pd->vbus) {
+		pd->vbus = devm_regulator_get(pd->dev.parent, "vbus");
+		if (IS_ERR(pd->vbus)) {
+			usbpd_err(&pd->dev, "Unable to get vbus\n");
+			return -EAGAIN;
+		}
+	}
+#endif
 
 	count = 10;
 	/*
@@ -2608,6 +2633,7 @@ static void handle_state_src_transition_to_default(struct usbpd *pd,
 		regulator_disable(pd->vconn);
 	pd->vconn_enabled = false;
 
+#ifdef CONFIG_MACH_ONEPLUS_8PRO
 	if (pd->vbus_enabled) {
 		/* @bsp, 2019/08/30 Wireless Charging porting */
 		if (pd->use_external_boost) {
@@ -2620,6 +2646,10 @@ static void handle_state_src_transition_to_default(struct usbpd *pd,
 		}
 	}
 	pd->is_otg_mode = false;
+#else
+	if (pd->vbus_enabled)
+		regulator_disable(pd->vbus);
+#endif
 	pd->vbus_enabled = false;
 
 	if (pd->current_dr != DR_DFP) {
@@ -3325,6 +3355,7 @@ static void handle_state_prs_src_snk_transition_to_off(struct usbpd *pd,
 {
 	int ret;
 
+#ifdef CONFIG_MACH_ONEPLUS_8PRO
 	if (pd->vbus_enabled) {
 		/* @bsp, 2019/08/30 Wireless Charging porting */
 		if (pd->use_external_boost) {
@@ -3338,6 +3369,12 @@ static void handle_state_prs_src_snk_transition_to_off(struct usbpd *pd,
 		pd->is_otg_mode = false;
 		pd->vbus_enabled = false;
 	}
+#else
+	if (pd->vbus_enabled) {
+		regulator_disable(pd->vbus);
+		pd->vbus_enabled = false;
+	}
+#endif
 
 	/* PE_PRS_SRC_SNK_Assert_Rd */
 	pd->current_pr = PR_SINK;
@@ -3532,6 +3569,7 @@ static void handle_disconnect(struct usbpd *pd)
 			POWER_SUPPLY_PROP_PD_ACTIVE, &val);
 
 	if (pd->vbus_enabled) {
+#ifdef CONFIG_MACH_ONEPLUS_8PRO
 		/* @bsp, 2019/08/30 Wireless Charging porting */
 		if (pd->use_external_boost) {
 			gpio_set_value_cansleep(pd->otg_en_gpio, 0);
@@ -3542,6 +3580,9 @@ static void handle_disconnect(struct usbpd *pd)
 			regulator_disable(pd->vbus);
 		}
 		pd->is_otg_mode = false;
+#else
+		regulator_disable(pd->vbus);
+#endif
 		pd->vbus_enabled = false;
 	}
 
@@ -4733,7 +4774,9 @@ struct usbpd *usbpd_create(struct device *parent)
 	if (!pd)
 		return ERR_PTR(-ENOMEM);
 
+#ifdef CONFIG_MACH_ONEPLUS_8PRO
 	pd_p = pd;
+#endif
 	device_initialize(&pd->dev);
 	pd->dev.class = &usbpd_class;
 	pd->dev.parent = parent;
@@ -4752,6 +4795,7 @@ struct usbpd *usbpd_create(struct device *parent)
 	if (ret)
 		goto free_pd;
 
+#ifdef CONFIG_MACH_ONEPLUS_8PRO
 /* @bsp, 2019/08/30 Wireless Charging porting */
 	pd->use_external_boost = of_property_read_bool(parent->of_node, "otg-use_external_boost");
 	if (pd->use_external_boost) {
@@ -4780,16 +4824,22 @@ struct usbpd *usbpd_create(struct device *parent)
 		}
 	}
 	pd->is_otg_mode = false;
+#endif
 
 	pd->wq = alloc_ordered_workqueue("usbpd_wq", WQ_FREEZABLE | WQ_HIGHPRI);
 	if (!pd->wq) {
 		ret = -ENOMEM;
+#ifdef CONFIG_MACH_ONEPLUS_8PRO
 		/* @bsp, 2019/08/30 Wireless Charging porting */
 		if (pd->use_external_boost)
 			goto free_otg_en_gpio;
 		else
 			goto del_pd;
+#else
+		goto del_pd;
+#endif
 	}
+
 	INIT_WORK(&pd->sm_work, usbpd_sm);
 	INIT_WORK(&pd->start_periph_work, start_usb_peripheral_work);
 	hrtimer_init(&pd->timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
@@ -4941,6 +4991,7 @@ put_psy:
 	power_supply_put(pd->usb_psy);
 destroy_wq:
 	destroy_workqueue(pd->wq);
+#ifdef CONFIG_MACH_ONEPLUS_8PRO
 /* @bsp, 2019/08/30 Wireless Charging porting */
 free_otg_en_gpio:
 	if (pd->use_external_boost && gpio_is_valid(pd->otg_en_gpio))
@@ -4948,6 +4999,7 @@ free_otg_en_gpio:
 free_vbus_gpio:
 	if (pd->use_external_boost && gpio_is_valid(pd->vbus_gpio))
 		devm_gpio_free(&pd->dev, pd->vbus_gpio);
+#endif
 
 del_pd:
 	device_del(&pd->dev);

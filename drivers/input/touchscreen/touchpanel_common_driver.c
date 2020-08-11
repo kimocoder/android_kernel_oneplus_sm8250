@@ -102,7 +102,9 @@ static irqreturn_t tp_irq_thread_fn(int irq, void *dev_id);
 //#if defined(CONFIG_FB) || defined(CONFIG_DRM_MSM)
 static int tfb_notifier_callback(struct notifier_block *self, unsigned long event, void *data);
 //#endif
+#ifdef CONFIG_MACH_ONEPLUS_8PRO
 static int reverse_charge_notifier_callback(struct notifier_block *self, unsigned long event, void *data);
+#endif
 
 static void tp_touch_release(struct touchpanel_data *ts);
 static void tp_btnkey_release(struct touchpanel_data *ts);
@@ -4813,10 +4815,12 @@ int register_common_touch_device(struct touchpanel_data *pdata)
 		}
 	}
 
+#ifdef CONFIG_MACH_ONEPLUS_8PRO
 	ts->reverse_charge_notif.notifier_call = reverse_charge_notifier_callback;
 	ret = register_reverse_charge_notifier(&ts->reverse_charge_notif);
 	if (ret)
 		TPD_INFO("unable to register severse_charge_notifier:%d\n", ret);
+#endif
 	//step15 : workqueue create(speedup_resume)
 	ts->speedup_resume_wq = create_singlethread_workqueue("speedup_resume_wq");
 	if (!ts->speedup_resume_wq) {
@@ -5350,6 +5354,7 @@ static int tfb_notifier_callback(struct notifier_block *self, unsigned long even
 	return 0;
 }
 //#endif
+#ifdef CONFIG_MACH_ONEPLUS_8PRO
 static int reverse_charge_notifier_callback(struct notifier_block *self, unsigned long event, void *data)
 {
 	struct touchpanel_data *ts = container_of(self, struct touchpanel_data, reverse_charge_notif);
@@ -5374,6 +5379,7 @@ static int reverse_charge_notifier_callback(struct notifier_block *self, unsigne
 
 	return 0;
 }
+#endif
 #ifdef CONFIG_TOUCHPANEL_MTK_PLATFORM
 void tp_i2c_suspend(struct touchpanel_data *ts)
 {
