@@ -427,7 +427,7 @@ KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
 		   -Wno-format-security \
 		   -std=gnu89
 
-KBUILD_CFLAGS	+= -mcpu=cortex-a55 -mtune=cortex-a55
+KBUILD_CFLAGS	+= -mcpu=cortex-a77 -mtune=cortex-a77
 
 KBUILD_CPPFLAGS := -D__KERNEL__
 KBUILD_AFLAGS_KERNEL :=
